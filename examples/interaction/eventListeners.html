@@ -32,12 +32,21 @@
       {id: 6, content: 'item 6', start: '2013-04-27'}
     ]);
 
+    var groups = new timeline.DataSet([
+      {id: 'g1', content: 'group 1'},
+      {id: 'g2', content: 'group 2'},
+      {id: 'g3', content: 'group 3'},
+      {id: 'g4', content: 'group 4'},
+      {id: 'g5', content: 'group 5'},
+      {id: 'g6', content: 'group 6'}
+    ]);
+
     var container = document.getElementById('visualization');
     var options = {
       editable: true,
       onInitialDrawComplete: function() { logEvent('Timeline initial draw completed', {}); },
     };
-    var timeline = new timeline.Timeline(container, items, options);
+    var timeline = new timeline.Timeline(container, items, groups, options);
 
     timeline.on('rangechange', function (properties) {
       logEvent('rangechange', properties);
