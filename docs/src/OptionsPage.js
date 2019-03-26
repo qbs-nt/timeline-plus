@@ -838,7 +838,8 @@ class OptionsPage extends React.Component {
           <td className="indent">tooltipOnItemUpdateTime.template</td>
           <td>Function</td>
           <td>none</td>
-          <td>A template function used to generate the contents of the tooltip. The function is called by the Timeline with an item data as the first argument, and must return HTML code, a string or a template as result. See section <a href="#Templates">Templates</a> for a detailed explanation.
+          <td>
+            A template function used to generate the contents of the tooltip. The function is called by the Timeline with an item data as the first argument, and must return HTML code, a string or a template as result. See section <a href="#Templates">Templates</a> for a detailed explanation.
             See also: <code>tooltip.template</code>.
           </td>
         </tr>
