@@ -655,6 +655,36 @@ class OptionsPage extends React.Component {
         </tr>
 
         <tr>
+          <td>substeps</td>
+          <td>Object</td>
+          <td><code>{`Object`}</code></td>
+          <td>
+            Configure "substeps" which are lines segmenting the minor scale (within
+            the item area) to show each step (for current step size &gt; 1) or to show
+            the lines for the next smaller scale (if current step size is 1).
+            This helps the user to grasp the currently visible scale and steps,
+            especially when minor labels are skipped due to steps &gt; 1.
+          </td>
+        </tr>
+
+        <tr>
+          <td>substeps.visible</td>
+          <td>boolean</td>
+          <td><code>{`false`}</code></td>
+          <td>
+            Activates "substeps". See above for an explanation.
+            It is set to <code>{`false`}</code> by default for compatibility reasons.
+          </td>
+        </tr>
+
+        <tr>
+          <td>substeps.minWidth</td>
+          <td>number</td>
+          <td><code>{`8.0`}</code></td>
+          <td>Minimum width (pixel) for a substep to be visible.</td>
+        </tr>
+
+        <tr>
           <td>showTooltips</td>
           <td>boolean</td>
           <td><code>{`true`}</code></td>

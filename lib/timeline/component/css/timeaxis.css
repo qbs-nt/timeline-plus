@@ -53,3 +53,10 @@
 .timeline-time-axis .timeline-grid.timeline-major {
   border-color: #bfbfbf;
 }
+
+.timeline-time-axis .timeline-grid.timeline-substep {
+  /* slightly ligher than .timeline-minor, and dotted */
+  border-color: #efefef;
+  border-left-style: dotted;
+  border-right-style: dotted;
+}
