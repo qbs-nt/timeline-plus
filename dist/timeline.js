@@ -2,8 +2,8 @@
  * timeline plus
  * https://yotamberk.github.io/timeline-plus
  *
- * @version 2.3.6-obg.2
- * @date    2019-03-26
+ * @version 2.3.6-obg.3
+ * @date    2019-04-10
  *
  */
 
@@ -6414,9 +6414,9 @@ function (_Component) {
       this.hammer.on('doubletap', this._onAddItem.bind(this));
 
       if (this.options.rtl) {
-        this.groupHammer = new __WEBPACK_IMPORTED_MODULE_8__module_hammer___default.a(this.body.dom.rightContainer);
+        this.groupHammer = new __WEBPACK_IMPORTED_MODULE_8__module_hammer___default.a(this.body.dom.rightContainer); // this.groupHammer = new Hammer(this.body.dom.rightContainer,{domEvents: true});
       } else {
-        this.groupHammer = new __WEBPACK_IMPORTED_MODULE_8__module_hammer___default.a(this.body.dom.leftContainer);
+        this.groupHammer = new __WEBPACK_IMPORTED_MODULE_8__module_hammer___default.a(this.body.dom.leftContainer); // this.groupHammer = new Hammer(this.body.dom.leftContainer,{domEvents: true});
       }
 
       this.groupHammer.on('tap', this._onGroupClick.bind(this));
@@ -8135,10 +8135,35 @@ function (_Component) {
   }, {
     key: "_onGroupClick",
     value: function _onGroupClick(event) {
+      var _this10 = this;
+
       var group = this.groupFromTarget(event);
+      console.log('ItemSet._onGroupClick', {
+        group: group,
+        event: event
+      });
+      setTimeout(function () {
+        console.log('ItemSet._onGroupClick -> timeout', {
+          group: group,
+          event: event
+        });
+
+        _this10.toggleGroupShowNested(group);
+      }, 1);
+    }
+  }, {
+    key: "toggleGroupShowNested",
+    value: function toggleGroupShowNested(group) {
+      var force = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : undefined;
       if (!group || !group.nestedGroups) return;
       var groupsData = this.groupsData.getDataSet();
-      group.showNested = !group.showNested;
+
+      if (force != undefined) {
+        group.showNested = !!force;
+      } else {
+        group.showNested = !group.showNested;
+      }
+
       var nestingGroup = groupsData.get(group.groupId);
       nestingGroup.showNested = group.showNested;
       var fullNestedGroups = group.nestedGroups;
@@ -10429,6 +10454,10 @@ function (_Component) {
       // axis orientation: 'top' or 'bottom'
       showMinorLabels: true,
       showMajorLabels: true,
+      substeps: {
+        visible: false,
+        minWidth: 8.0
+      },
       maxMinorChars: 7,
       format: __WEBPACK_IMPORTED_MODULE_8__TimeStep__["default"].FORMAT,
       moment: __WEBPACK_IMPORTED_MODULE_10__module_moment__["default"],
@@ -10450,6 +10479,8 @@ function (_Component) {
    *                          {string} [orientation.axis]
    *                          {boolean} [showMinorLabels]
    *                          {boolean} [showMajorLabels]
+   *                          {boolean} [substeps.visible]
+   *                          {number} [substeps.minWidth]
    */
 
 
@@ -10458,7 +10489,7 @@ function (_Component) {
     value: function setOptions(options) {
       if (options) {
         // copy all options that we know
-        __WEBPACK_IMPORTED_MODULE_6__util__["selectiveExtend"](['showMinorLabels', 'showMajorLabels', 'maxMinorChars', 'hiddenDates', 'timeAxis', 'moment', 'rtl'], this.options, options); // deep copy the format options
+        __WEBPACK_IMPORTED_MODULE_6__util__["selectiveExtend"](['showMinorLabels', 'showMajorLabels', 'substeps', 'maxMinorChars', 'hiddenDates', 'timeAxis', 'moment', 'rtl'], this.options, options); // deep copy the format options
 
         __WEBPACK_IMPORTED_MODULE_6__util__["selectiveDeepExtend"](['format'], this.options, options);
 
@@ -10617,6 +10648,7 @@ function (_Component) {
       var count = 0;
       var MAX = 1000;
       var className;
+      var showSubsteps = this.options.substeps && this.options.substeps.visible;
       step.start();
       next = step.getCurrent();
       xNext = this.body.util.toScreen(next);
@@ -10651,6 +10683,7 @@ function (_Component) {
         }
 
         if (isMajor && this.options.showMajorLabels) {
+          // major line
           if (x > 0) {
             if (xFirstMajorLabel == undefined) {
               xFirstMajorLabel = x;
@@ -10660,16 +10693,20 @@ function (_Component) {
           }
 
           line = this._repaintMajorLine(x, width, orientation, className);
-        } else {
-          // minor line
-          if (showMinorGrid) {
-            line = this._repaintMinorLine(x, width, orientation, className);
-          } else {
-            if (line) {
-              // adjust the width of the previous grid
-              line.style.width = "".concat(parseInt(line.style.width) + width, "px");
-            }
+
+          if (showSubsteps) {
+            this._repaintSubsteps(step, current, next, x, orientation, className);
           }
+        } else if (showMinorGrid) {
+          // minor line
+          line = this._repaintMinorLine(x, width, orientation, className);
+
+          if (showSubsteps) {
+            this._repaintSubsteps(step, current, next, x, orientation, className);
+          }
+        } else if (line) {
+          // adjust the width of the previous grid
+          line.style.width = "".concat(parseInt(line.style.width) + width, "px");
         }
       }
 
@@ -10779,6 +10816,152 @@ function (_Component) {
       this.dom.majorTexts.push(label);
       return label;
     }
+    /** 
+     * Repaint substeps, which are line separating minor lines.
+     * @private
+     */
+
+  }, {
+    key: "_repaintSubsteps",
+    value: function _repaintSubsteps(step, current, next, x, orientation, className) {
+      var minimumSubstepWidth = this.options.substeps.minWidth;
+      var stepDuration = next - current;
+      var subscale;
+
+      if (step.step > 1) {
+        subscale = step.scale;
+      } else {
+        switch (step.scale) {
+          case 'year':
+            subscale = 'quarter';
+            break;
+
+          case 'quarter':
+            subscale = 'month';
+            break;
+
+          case 'month':
+            subscale = 'week';
+            break;
+
+          case 'week':
+            subscale = 'day';
+            break;
+
+          case 'weekday': // fall-through
+
+          case 'day':
+            subscale = 'hour';
+            break;
+
+          case 'hour':
+            subscale = 'minute';
+            break;
+
+          case 'minute':
+            subscale = 'second';
+            break;
+
+          case 'second':
+            subscale = 'millisecond';
+            break;
+        }
+      }
+
+      if (!subscale) {
+        console.warn("Could not derive subscale from step ".concat(step));
+        return;
+      }
+
+      var substepDuration = 1; // 1 is default
+
+      var substepDurationUnit;
+
+      switch (subscale) {
+        case 'year':
+          substepDurationUnit = 'years'; // Note: logic redundant with TimeStep.setMinimumStep(). can we use that
+          // code here? Or even use a TimeStep instance for substeps? We can safely
+          // assume that step.scale is 'year'
+
+          switch (step.step) {
+            case 1000:
+              substepDuration = 500;
+              break;
+
+            case 500:
+              substepDuration = 100;
+              break;
+
+            case 100:
+              substepDuration = 50;
+              break;
+
+            case 50:
+              substepDuration = 10;
+              break;
+          }
+
+          break;
+
+        case 'quarter':
+          substepDurationUnit = 'quarters';
+          break;
+
+        case 'month':
+          substepDurationUnit = 'months';
+          break;
+
+        case 'week':
+          substepDurationUnit = 'weeks';
+          break;
+
+        case 'day':
+          substepDurationUnit = 'days';
+          break;
+
+        case 'hour':
+          substepDurationUnit = 'hours';
+          break;
+
+        case 'minute':
+          substepDurationUnit = 'minutes';
+          break;
+
+        case 'second':
+          substepDurationUnit = 'seconds';
+          break;
+
+        case 'millisecond':
+          substepDurationUnit = 'milliseconds';
+
+          if (stepDuration > 100) {
+            substepDuration = 100;
+          } else {
+            substepDuration = 10;
+          }
+
+          break;
+      }
+
+      var subscaleDate = current.clone();
+      subscaleDate.add(substepDuration, substepDurationUnit);
+      var index = 0;
+
+      while (subscaleDate.valueOf() < next.valueOf()) {
+        var subscaleX = this.body.util.toScreen(subscaleDate); // Checks minimum width. Due to equal widths, check on first iteration
+        // is sufficient.
+
+        if (index === 0 && subscaleX - x < minimumSubstepWidth) {
+          break;
+        }
+
+        this._repaintSubstepLine(subscaleX, 1, orientation, className); // Advance
+
+
+        subscaleDate.add(substepDuration, substepDurationUnit);
+        index++;
+      }
+    }
     /**
      * Create a minor line for the axis at position x
      * @param {number} x
@@ -10866,6 +11049,52 @@ function (_Component) {
 
       line.style.height = "".concat(props.majorLineHeight, "px");
       line.style.width = "".concat(width, "px");
+      return line;
+    }
+    /**
+     * Create a substep line for the axis at position x
+     * @param {number} x
+     * @param {number} width
+     * @param {string} orientation   "top" or "bottom" (default)
+     * @param {string} className
+     * @return {Element} Returns the created line
+     * @private
+     */
+
+  }, {
+    key: "_repaintSubstepLine",
+    value: function _repaintSubstepLine(x, width, orientation, className) {
+      // reuse redundant line
+      var line = this.dom.redundant.lines.shift();
+
+      if (!line) {
+        // create vertical line
+        line = document.createElement('div');
+        this.dom.background.appendChild(line);
+      }
+
+      this.dom.lines.push(line);
+      var props = this.props;
+
+      if (orientation == 'top') {
+        line.style.top = props.majorLabelHeight + props.minorLabelHeight + 'px';
+      } else {
+        line.style.top = this.body.domProps.top.height - props.minorLabelHeight + 'px';
+      }
+
+      line.style.height = props.minorLineHeight - props.minorLabelHeight + 'px';
+
+      if (this.options.rtl) {
+        line.style.left = "";
+        line.style.right = x - width / 2 + 'px';
+        line.className = 'timeline-grid timeline-vertical-rtl timeline-substep ' + className;
+      } else {
+        line.style.left = x - width / 2 + 'px';
+        line.className = 'timeline-grid timeline-vertical timeline-substep ' + className;
+      }
+
+      line.style.width = width + 'px'; // explicitly set width because of line reuse
+
       return line;
     }
     /**
@@ -12726,6 +12955,7 @@ function () {
             }
           })();
         } else {
+          // @Sebu getVisibleItems() verwenden? identisch?
           // no custom order function, lazy stacking
           var visibleItems = this._updateItemsInRange(orderedItems, this.visibleItems.filter(function (item) {
             return !item.isCluster;
@@ -13264,9 +13494,9 @@ function () {
         for (var _i2 = 0; _i2 < oldVisibleItems.length; _i2++) {
           this._checkIfVisibleWithReference(oldVisibleItems[_i2], visibleItems, visibleItemsLookup, range);
         }
-      } // find a position of an item with start anywhere between lowerBound and upperBound. It could be the pos of any item
-      // within that range due to efficient binary search. That's no problem as _traceVisible() processes all items
-      // starting from that position in both directions (see below)
+      } // find a position of an item with start anywhere between lowerBound and upperBound. This could be the pos of any item
+      // within that range due to efficient binary search. That's no problem as _traceVisible() (see below) processes all items
+      // starting from that position in both directions 
 
 
       var initialPosByStart = __WEBPACK_IMPORTED_MODULE_3__util__["binarySearchCustom"](orderedItems.byStart, searchFunction, 'data', 'start'); // trace the visible items from the inital start pos both ways until an invisible item is found, we only look at the start values.
@@ -13284,8 +13514,9 @@ function () {
           this._checkIfVisibleWithReference(orderedItems.byEnd[_i3], visibleItems, visibleItemsLookup, range);
         }
       } else {
-        // we do a binary search for the items that have defined end times.
-        // find a position of an item which has an end and lies anywhere between lowerBound and upperBound. 
+        // find a position of an item which has an "end" that lies anywhere between lowerBound and upperBound. This could
+        // be the pos of any item within that range due to efficient binary search. That's no problem as _traceVisible()
+        // (see below) processes all items starting from that position in both directions.
         var initialPosByEnd = __WEBPACK_IMPORTED_MODULE_3__util__["binarySearchCustom"](orderedItems.byEnd, searchFunction, 'data', 'end'); // trace the visible items from the inital start pos both ways until an invisible item is found, we only look at the end values.
 
         this._traceVisible(initialPosByEnd, orderedItems.byEnd, visibleItems, visibleItemsLookup, function (item) {
@@ -13736,7 +13967,8 @@ function (_Item) {
     key: "_getDomComponentsSizes",
     value: function _getDomComponentsSizes() {
       // determine from css whether this box has overflow
-      this.overflow = window.getComputedStyle(this.dom.frame).overflow !== 'hidden';
+      this.overflow = false; // window.getComputedStyle(this.dom.frame).overflow !== 'hidden';
+
       return {
         content: {
           width: this.dom.content.offsetWidth
@@ -16759,8 +16991,6 @@ function () {
       this._origRedraw = this._redraw.bind(this);
       this._redraw = __WEBPACK_IMPORTED_MODULE_6__util__["throttle"](this._origRedraw);
       this.on('_change', function (properties) {
-        console.log('Core.js#_change');
-
         if (me.itemSet && me.itemSet.initialItemSetDrawn && properties && properties.queue == true) {
           me._redraw();
         } else {
@@ -21010,6 +21240,14 @@ var allOptions = {
   showMinorLabels: {
     'boolean': bool
   },
+  substeps: {
+    visible: {
+      'boolean': bool
+    },
+    minWidth: {
+      'number': number
+    }
+  },
   stack: {
     'boolean': bool
   },
@@ -21073,7 +21311,7 @@ var allOptions = {
       'boolean': bool
     },
     overflowMethod: {
-      'string': ['cap', 'flip']
+      'string': ['cap', 'flip', 'none']
     },
     delay: {
       number: number
@@ -21211,6 +21449,10 @@ var configureOptions = {
     showCurrentTime: false,
     showMajorLabels: true,
     showMinorLabels: true,
+    substeps: {
+      visible: false,
+      minWidth: 8.0
+    },
     stack: true,
     stackSubgroups: true,
     cluster: false,
@@ -31486,7 +31728,9 @@ function (_Core) {
 
       var start = null;
       var end = null;
+      console.log('focus', itemsData);
       itemsData.forEach(function (itemData) {
+        console.log('focus forEach', itemData);
         var s = itemData.start.valueOf();
         var e = 'end' in itemData ? itemData.end.valueOf() : itemData.start.valueOf();
 
@@ -31642,10 +31886,18 @@ function (_Core) {
           if (item.groupShowing) {
             var returnQueue = true;
             redrawQueue[key] = item.redraw(returnQueue);
-            redrawQueueLength = redrawQueue[key].length;
+
+            if (redrawQueue[key].length > redrawQueueLength) {
+              redrawQueueLength = redrawQueue[key].length;
+            }
           }
         });
         var needRedraw = redrawQueueLength > 0;
+        console.log('getItemRange 1', {
+          redrawQueue: redrawQueue,
+          redrawQueueLength: redrawQueueLength,
+          needRedraw: needRedraw
+        });
 
         if (needRedraw) {
           var _loop = function _loop(i) {
@@ -31658,8 +31910,9 @@ function (_Core) {
           for (var i = 0; i < redrawQueueLength; i++) {
             _loop(i);
           }
-        } // calculate the date of the left side and right side of the items given
+        }
 
+        return 1; // calculate the date of the left side and right side of the items given
 
         __WEBPACK_IMPORTED_MODULE_7__util__["forEach"](this.itemSet.items, function (item) {
           var start = getStart(item);
@@ -35046,7 +35299,7 @@ var Popup =
 function () {
   /**
    * @param {Element} container       The container object.
-   * @param {string}  overflowMethod  How the popup should act to overflowing ('flip' or 'cap')
+   * @param {string}  overflowMethod  How the popup should act to overflowing ('flip', 'cap' or 'none')
    */
   function Popup(container, overflowMethod) {
     __WEBPACK_IMPORTED_MODULE_0__babel_runtime_helpers_classCallCheck___default()(this, Popup);
@@ -35109,16 +35362,18 @@ function () {
         var left = 0,
             top = 0;
 
-        if (this.overflowMethod == 'flip') {
+        if (this.overflowMethod == 'flip' || this.overflowMethod == 'none') {
           var isLeft = false,
               isTop = true; // Where around the position it's located
 
-          if (this.y - height < this.padding) {
-            isTop = false;
-          }
+          if (this.overflowMethod == 'flip') {
+            if (this.y - height < this.padding) {
+              isTop = false;
+            }
 
-          if (this.x + width > maxWidth - this.padding) {
-            isLeft = true;
+            if (this.x + width > maxWidth - this.padding) {
+              isLeft = true;
+            }
           }
 
           if (isLeft) {
@@ -35133,6 +35388,7 @@ function () {
             top = this.y;
           }
         } else {
+          // this.overflowMethod == 'cap'
           top = this.y - height;
 
           if (top + height + this.padding > maxHeight) {

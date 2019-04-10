@@ -1186,6 +1186,12 @@ div.timeline-tooltip {
   border-color: #bfbfbf;
 }
 
+.timeline-time-axis .timeline-grid.timeline-substep {
+  /* same as .timeline-minor, but dotted */
+  border-color: #e5e5e5;
+  border-left-style: dotted;
+  border-right-style: dotted;
+}
 
 .timeline-timeline {
   position: relative;
